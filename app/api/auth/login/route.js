@@ -2,6 +2,16 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { NextResponse } from 'next/server';
 
+// --- Security safeguard -------------------------------------------------
+// Ensure the JWT signing secret is present **before** handling any request.
+// Failing fast avoids issuing tokens that attackers could easily forge.
+const JWT_SECRET = process.env.JWT_SECRET;
+if (typeof JWT_SECRET !== 'string' || JWT_SECRET.trim() === '') {
+  throw new Error(
+    'Environment variable JWT_SECRET must be defined and non-empty at runtime.'
+  );
+}
+// ------------------------------------------------------------------------
 
 export async function POST(request) {
   try {
@@ -23,7 +33,7 @@ export async function POST(request) {
       );
     }
 
-    const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET);
+    const token = jwt.sign({ userId: user.id }, JWT_SECRET);
     
     const response = NextResponse.json({ 
       success: true, 
