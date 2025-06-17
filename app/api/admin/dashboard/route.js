@@ -1,23 +1,29 @@
 import jwt from 'jsonwebtoken';
 import { NextResponse } from 'next/server';
-import { getAdminDashboardStats } from '../../../../utils/authHelpers';
+import { getAdminDashboardStats, getUserFromDB } from '../../../../utils/authHelpers';
+
+// Restrict accepted algorithms to the one used when issuing tokens
+const JWT_VERIFY_OPTIONS = {
+  algorithms: ['HS256']
+};
 
 export async function GET(request) {
   try {
     const authCookie = request.cookies.get('auth')?.value;
     if (!authCookie) {
       return NextResponse.json(
-        { error: 'Unauthorized' }, 
+        { error: 'Unauthorized' },
         { status: 401 }
       );
     }
 
-    const decoded = jwt.verify(authCookie, process.env.JWT_SECRET);
+    // Perform strict verification to prevent algorithm-confusion and related attacks
+    const decoded = jwt.verify(authCookie, process.env.JWT_SECRET, JWT_VERIFY_OPTIONS);
     const user = await getUserFromDB(decoded.userId);
     
     if (!user.isAdmin) {
       return NextResponse.json(
-        { error: 'Admin required' }, 
+        { error: 'Admin required' },
         { status: 403 }
       );
     }
@@ -27,7 +33,7 @@ export async function GET(request) {
     return NextResponse.json(stats);
   } catch (error) {
     return NextResponse.json(
-      { error: 'Invalid token' }, 
+      { error: 'Invalid token' },
       { status: 401 }
     );
   }
