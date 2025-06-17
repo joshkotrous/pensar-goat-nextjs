@@ -23,7 +23,24 @@ export async function POST(request) {
       );
     }
 
-    const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET);
+    // ------------------------------------------------------------------
+    // Secure token issuance: include an explicit expiration claim ("exp")
+    // ------------------------------------------------------------------
+    const EXPIRES_FALLBACK_SEC = 60 * 60; // 1 hour
+    const expiresEnv = process.env.JWT_EXPIRES_IN; // optional env override (seconds or jsonwebtoken format)
+
+    // `jsonwebtoken` accepts shorthand such as "1h". We pass the raw env string
+    // (or default) to `expiresIn`, and calculate a numeric variant for the cookie.
+    const expiresInOption = expiresEnv || '1h';
+    const cookieMaxAge = expiresEnv && /^\d+$/.test(expiresEnv)
+      ? parseInt(expiresEnv, 10)
+      : EXPIRES_FALLBACK_SEC;
+
+    const token = jwt.sign(
+      { userId: user.id },
+      process.env.JWT_SECRET,
+      { expiresIn: expiresInOption }
+    );
     
     const response = NextResponse.json({ 
       success: true, 
@@ -36,7 +53,8 @@ export async function POST(request) {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
-      path: '/'
+      path: '/',
+      maxAge: cookieMaxAge // keep cookie lifetime in sync with JWT
     });
 
     return response;
