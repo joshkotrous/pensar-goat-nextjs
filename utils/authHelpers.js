@@ -1,5 +1,30 @@
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
+import crypto from 'crypto';
+
+/**
+ * USER_PASSWORD_MAP env var should contain a JSON map of usernames to
+ * bcrypt-hashed passwords, e.g. {"alice":"$2b$10$..."}. Loading credentials
+ * from the environment removes secrets from source control and enables
+ * rotation without code changes.
+ */
+const USER_PASSWORD_MAP = (() => {
+  try {
+    return JSON.parse(process.env.USER_PASSWORD_MAP || '{}');
+  } catch {
+    // Log once and continue with an empty map if the variable is malformed.
+    console.error('utils/authHelpers: Invalid USER_PASSWORD_MAP – using empty map');
+    return {};
+  }
+})();
+
+// Generate a strong random fallback hash. The plaintext never leaves memory,
+// making the default credential effectively unguessable even if multiple
+// accounts share it.
+const FALLBACK_HASH = bcrypt.hashSync(
+  crypto.randomBytes(32).toString('hex'),
+  10
+);
 
 export function getUserSensitiveData(userId) {
   return {
@@ -48,10 +73,14 @@ export function deleteUserAccount(userId, reason) {
 }
 
 export async function getUserFromDB(username) {
+  const storedHash = USER_PASSWORD_MAP[username];
+  
   return {
-    id: parseInt(username) || 1,
+    id: Number.parseInt(username, 10) || 1,
     username,
-    hashedPassword: await bcrypt.hash('password123', 10),
+    // Use the configured password hash when available; otherwise fall back to
+    // the strong random secret generated at startup.
+    hashedPassword: storedHash || FALLBACK_HASH,
     isAdmin: username === 'admin'
   };
 }
