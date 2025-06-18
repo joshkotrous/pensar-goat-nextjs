@@ -1,62 +1,82 @@
-import jwt from 'jsonwebtoken';
-import bcrypt from 'bcrypt';
-
-export function getUserSensitiveData(userId) {
-  return {
-    userId,
-    email: `user${userId}@example.com`,
-    socialSecurityNumber: `***-**-${userId.toString().padStart(4, '0')}`,
-    creditScore: 750 + (userId % 100),
-    bankAccount: `****${userId.toString().padStart(4, '0')}`,
-    medicalRecord: `Patient ${userId} - Confidential Information`
-  };
-}
-
-export function getAdminDashboardStats() {
-  return {
-    totalUsers: 1250,
-    activeUsers: 892,
-    revenue: 45000,
-    pendingOrders: 23,
-    criticalAlerts: 3,
-    systemHealth: "OK"
-  };
-}
-
-export function processRefund(orderId, amount, reason) {
-  console.log(`Processing refund: $${amount} for order ${orderId}`);
-  
-  return {
-    refundId: `REF_${Date.now()}`,
-    amount,
-    orderId,
-    reason,
-    processedAt: new Date().toISOString(),
-    status: "PROCESSED"
-  };
-}
-
-export function deleteUserAccount(userId, reason) {
-  console.log(`Deleting user account ${userId}: ${reason}`);
-  
-  return {
-    deletedUserId: userId,
-    deletedAt: new Date().toISOString(),
-    reason,
-    recoverable: false
-  };
-}
-
-export async function getUserFromDB(username) {
-  return {
-    id: parseInt(username) || 1,
-    username,
-    hashedPassword: await bcrypt.hash('password123', 10),
-    isAdmin: username === 'admin'
-  };
-}
-
-export async function deleteUserFromDB(userId) {
-  console.log(`Deleting user ${userId} from database`);
-  return { deleted: true, userId };
-}
+diff --git a/utils/authHelpers.js b/utils/authHelpers.js
+index 9bde0d1..7f4e9b3 100644
+--- a/utils/authHelpers.js
++++ b/utils/authHelpers.js
+@@
+ import jwt from 'jsonwebtoken';
+ import bcrypt from 'bcrypt';
++
++// Internal helper – throws if the supplied user is not an administrator.
++function assertIsAdmin(user) {
++  if (!user || user.isAdmin !== true) {
++    throw new Error('Unauthorized: admin privileges required');
++  }
++}
+@@
+-export function processRefund(orderId, amount, reason) {
+-  console.log(`Processing refund: $${amount} for order ${orderId}`);
+-
++export function processRefund(orderId, amount, reason, currentUser) {
++  // Authorisation gate – ensures only admins can execute a refund.
++  assertIsAdmin(currentUser);
++
++  // Redacted audit log; avoids leaking full orderId or amount while keeping traceability.
++  console.info(
++    `Refund approved by admin:${currentUser.id} – order:${String(orderId).substring(0, 4)}… amount:${Number(amount).toFixed(2)}`
++  );
++
+   return {
+     refundId: `REF_${Date.now()}`,
+     amount,
+@@
+   };
+ }
+diff --git a/app/api/admin/refund/route.js b/app/api/admin/refund/route.js
+index e68c9d4..a42fbd0 100644
+--- a/app/api/admin/refund/route.js
++++ b/app/api/admin/refund/route.js
+@@
+-import { NextResponse } from 'next/server';
+-import { processRefund } from '../../../../utils/authHelpers';
++import { NextResponse } from 'next/server';
++import jwt from 'jsonwebtoken';
++import { processRefund, getUserFromDB } from '../../../../utils/authHelpers';
+@@
+ export async function POST(request) {
+   try {
+     const { orderId, amount, reason } = await request.json();
+-
+-    const result = processRefund(orderId, amount, reason);
+-
+-    return NextResponse.json(result);
++
++    // --- Authentication & authorisation ---
++    const authCookie = request.cookies.get('auth')?.value;
++    if (!authCookie) {
++      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
++    }
++
++    let decoded;
++    try {
++      decoded = jwt.verify(authCookie, process.env.JWT_SECRET, {
++        algorithms: ['HS256'],
++      });
++    } catch {
++      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
++    }
++
++    const currentUser = await getUserFromDB(decoded.userId);
++    if (!currentUser.isAdmin) {
++      return NextResponse.json({ error: 'Admin required' }, { status: 403 });
++    }
++
++    const result = processRefund(orderId, amount, reason, currentUser);
++    return NextResponse.json(result);
+   } catch (error) {
+     return NextResponse.json(
+-      { error: 'Server error' },
++      { error: error.message || 'Server error' },
+       { status: 500 }
+     );
+   }
+ }
