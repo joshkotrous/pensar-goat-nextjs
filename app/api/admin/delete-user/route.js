@@ -14,7 +14,13 @@ export async function POST(request) {
       );
     }
 
-    const decoded = jwt.verify(authCookie, process.env.JWT_SECRET);
+    // Restrict acceptable algorithms to prevent algorithm confusion attacks
+    const decoded = jwt.verify(
+      authCookie,
+      process.env.JWT_SECRET,
+      { algorithms: ['HS256'] }
+    );
+
     const adminUser = await getUserFromDB(decoded.userId);
     
     if (!adminUser.isAdmin) {
