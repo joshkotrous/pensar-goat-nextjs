@@ -1,6 +1,29 @@
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 
+/*
+ * ---------------------------------------------------------------------------
+ * User store & privilege model
+ * ---------------------------------------------------------------------------
+ * In the absence of a real database this in-memory map acts as the canonical
+ * record of legitimate users.  Administrative privileges are now tied to a
+ * *persisted* user entry instead of being inferred from untrusted client
+ * input, eliminating the previous privilege-escalation vector.
+ */
+const userStore = new Map();
+
+// Allow an operator to seed an initial admin account through environment
+// variables.  This removes hard-coded secrets while keeping configuration
+// flexible for different deployments.
+if (process.env.ADMIN_USERNAME && process.env.ADMIN_PASSWORD_HASH) {
+  userStore.set(process.env.ADMIN_USERNAME, {
+    id: 1,
+    username: process.env.ADMIN_USERNAME,
+    hashedPassword: process.env.ADMIN_PASSWORD_HASH,
+    isAdmin: true
+  });
+}
+
 export function getUserSensitiveData(userId) {
   return {
     userId,
@@ -47,12 +70,29 @@ export function deleteUserAccount(userId, reason) {
   };
 }
 
+/**
+ * Fetch a user record that downstream authentication/authorization logic can
+ * trust.
+ *
+ * 1. If the username exists in the trusted `userStore`, return that record.
+ * 2. Otherwise return a non-privileged placeholder to prevent accidental
+ *    privilege escalation while still allowing caller code that expects a user
+ *    object to behave normally.
+ */
 export async function getUserFromDB(username) {
+  const existing = userStore.get(username);
+  if (existing) {
+    // Clone to avoid accidental mutation of the canonical record.
+    return { ...existing };
+  }
+
   return {
-    id: parseInt(username) || 1,
+    id: Number.isInteger(parseInt(username, 10)) ? parseInt(username, 10) : Date.now(),
     username,
-    hashedPassword: await bcrypt.hash('password123', 10),
-    isAdmin: username === 'admin'
+    // Use a unique throw-away hash so that bcrypt.compare() calls fail safely
+    // without revealing whether our placeholder string was guessed.
+    hashedPassword: await bcrypt.hash(`placeholder-${username}-${Date.now()}`, 10),
+    isAdmin: false
   };
 }
 
