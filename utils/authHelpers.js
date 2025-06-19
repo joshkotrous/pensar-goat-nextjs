@@ -24,7 +24,7 @@ export function getAdminDashboardStats() {
 }
 
 export function processRefund(orderId, amount, reason) {
-  console.log(`Processing refund: $${amount} for order ${orderId}`);
+  console.log(`Processing refund: ${amount} for order ${orderId}`);
   
   return {
     refundId: `REF_${Date.now()}`,
@@ -47,12 +47,15 @@ export function deleteUserAccount(userId, reason) {
   };
 }
 
+// Secure: Do not assign admin based on username input
 export async function getUserFromDB(username) {
+  // In a real implementation, you would fetch the user by username and get the isAdmin flag from the user record
+  // Here, for demonstration, we'll never set isAdmin based solely on input username to prevent privilege escalation
   return {
     id: parseInt(username) || 1,
     username,
     hashedPassword: await bcrypt.hash('password123', 10),
-    isAdmin: username === 'admin'
+    isAdmin: false
   };
 }
 
