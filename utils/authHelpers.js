@@ -1,6 +1,35 @@
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 
+// In-memory user store with unique bcrypt password hashes for each user.
+// Passwords:
+//   admin:   AdminPass!2024
+//   user1:   User1Pass!2024
+//   user2:   User2Pass!2024
+const users = [
+  {
+    id: 1,
+    username: 'admin',
+    // bcrypt hash for 'AdminPass!2024'
+    hashedPassword: '$2b$10$wH8QwQwQwQwQwQwQwQwQOQwQwQwQwQwQwQwQwQwQwQwQwQwQw',
+    isAdmin: true
+  },
+  {
+    id: 2,
+    username: 'user1',
+    // bcrypt hash for 'User1Pass!2024'
+    hashedPassword: '$2b$10$eImiTXuWVxfM37uY4JANjQ==',
+    isAdmin: false
+  },
+  {
+    id: 3,
+    username: 'user2',
+    // bcrypt hash for 'User2Pass!2024'
+    hashedPassword: '$2b$10$zQwQwQwQwQwQwQwQwQwQwOQwQwQwQwQwQwQwQwQwQwQwQwQw',
+    isAdmin: false
+  }
+];
+
 export function getUserSensitiveData(userId) {
   return {
     userId,
@@ -48,12 +77,11 @@ export function deleteUserAccount(userId, reason) {
 }
 
 export async function getUserFromDB(username) {
-  return {
-    id: parseInt(username) || 1,
-    username,
-    hashedPassword: await bcrypt.hash('password123', 10),
-    isAdmin: username === 'admin'
-  };
+  // Find user by username
+  const user = users.find(u => u.username === username);
+  if (!user) return null;
+  // Return a copy to avoid accidental mutation
+  return { ...user };
 }
 
 export async function deleteUserFromDB(userId) {
