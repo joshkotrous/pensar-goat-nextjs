@@ -12,7 +12,11 @@ export async function GET(request) {
       );
     }
 
-    const decoded = jwt.verify(authCookie, process.env.JWT_SECRET);
+    const decoded = jwt.verify(authCookie, process.env.JWT_SECRET, {
+      algorithms: ['HS256'],
+      issuer: process.env.JWT_ISSUER,
+      audience: process.env.JWT_AUDIENCE
+    });
     
     const userData = getUserSensitiveData(decoded.userId);
     
