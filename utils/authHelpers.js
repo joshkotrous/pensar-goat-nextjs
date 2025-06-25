@@ -47,12 +47,13 @@ export function deleteUserAccount(userId, reason) {
   };
 }
 
+// Secure: Do not assign isAdmin based on username alone
 export async function getUserFromDB(username) {
   return {
     id: parseInt(username) || 1,
     username,
-    hashedPassword: await bcrypt.hash('password123', 10),
-    isAdmin: username === 'admin'
+    hashedPassword: await bcrypt.hash('password123', 10)
+    // isAdmin removed: must be determined by secure user record, not username
   };
 }
 
