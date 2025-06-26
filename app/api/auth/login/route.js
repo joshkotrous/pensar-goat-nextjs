@@ -23,7 +23,20 @@ export async function POST(request) {
       );
     }
 
-    const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET);
+    const jwtSecret = process.env.JWT_SECRET;
+    if (
+      !jwtSecret ||
+      typeof jwtSecret !== 'string' ||
+      jwtSecret.length < 32 ||
+      /^(?:[A-Za-z0-9]+)$/.test(jwtSecret) // too simple: only alphanumerics
+    ) {
+      return NextResponse.json(
+        { error: 'Server misconfiguration: JWT secret is missing or too weak.' },
+        { status: 500 }
+      );
+    }
+
+    const token = jwt.sign({ userId: user.id }, jwtSecret);
     
     const response = NextResponse.json({ 
       success: true, 
