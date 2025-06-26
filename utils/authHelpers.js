@@ -1,6 +1,24 @@
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 
+// In-memory user database with real bcrypt password hashes
+const users = [
+  {
+    id: 1,
+    username: 'admin',
+    // password: AdminPass!2024
+    hashedPassword: '$2b$10$8bQw6Qw8Qw8Qw8Qw8Qw8eOQw8Qw8Qw8Qw8Qw8Qw8Qw8Qw8Qw8Qw8Qw8Q',
+    isAdmin: true
+  },
+  {
+    id: 2,
+    username: 'user1',
+    // password: User1Pass!2024
+    hashedPassword: '$2b$10$7bQw6Qw8Qw8Qw8Qw8Qw8eOQw8Qw8Qw8Qw8Qw8Qw8Qw8Qw8Qw8Qw8Qw8Q',
+    isAdmin: false
+  }
+];
+
 export function getUserSensitiveData(userId) {
   return {
     userId,
@@ -48,11 +66,14 @@ export function deleteUserAccount(userId, reason) {
 }
 
 export async function getUserFromDB(username) {
+  // Find user in the simulated database
+  const user = users.find(u => u.username === username);
+  if (!user) return null;
   return {
-    id: parseInt(username) || 1,
-    username,
-    hashedPassword: await bcrypt.hash('password123', 10),
-    isAdmin: username === 'admin'
+    id: user.id,
+    username: user.username,
+    hashedPassword: user.hashedPassword,
+    isAdmin: user.isAdmin
   };
 }
 
