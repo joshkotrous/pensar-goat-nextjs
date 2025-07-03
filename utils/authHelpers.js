@@ -51,7 +51,7 @@ export async function getUserFromDB(username) {
   return {
     id: parseInt(username) || 1,
     username,
-    hashedPassword: await bcrypt.hash('password123', 10),
+    hashedPassword: null, // Removed hardcoded password for security
     isAdmin: username === 'admin'
   };
 }
