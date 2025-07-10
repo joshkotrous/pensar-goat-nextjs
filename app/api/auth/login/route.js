@@ -2,7 +2,6 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { NextResponse } from 'next/server';
 
-
 export async function POST(request) {
   try {
     const contentType = request.headers.get('content-type');
@@ -14,7 +13,7 @@ export async function POST(request) {
     }
 
     const { username, password } = await request.json();
-    
+
     const user = await getUserFromDB(username);
     if (!user || !await bcrypt.compare(password, user.hashedPassword)) {
       return NextResponse.json(
@@ -23,13 +22,21 @@ export async function POST(request) {
       );
     }
 
-    const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET);
-    
+    const jwtSecret = process.env.JWT_SECRET;
+    if (!jwtSecret || typeof jwtSecret !== 'string' || jwtSecret.length < 32) {
+      return NextResponse.json(
+        { error: 'JWT secret is not set or is too weak' },
+        { status: 500 }
+      );
+    }
+
+    const token = jwt.sign({ userId: user.id }, jwtSecret);
+
     const response = NextResponse.json({ 
       success: true, 
       user: { id: user.id, username: user.username } 
     });
-    
+
     response.cookies.set({
       name: 'auth',
       value: token,
@@ -47,3 +54,6 @@ export async function POST(request) {
     );
   }
 }
+
+// Note: getUserFromDB is assumed to be defined elsewhere as in the original code.
+
