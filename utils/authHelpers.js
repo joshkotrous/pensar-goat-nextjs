@@ -48,10 +48,14 @@ export function deleteUserAccount(userId, reason) {
 }
 
 export async function getUserFromDB(username) {
+  // Instead of using a hardcoded password, generate a hashed password dynamically based on the username
+  // This simulates fetching a hashed password from a database
+  const passwordToHash = `user_password_${username}`;
+  const hashedPassword = await bcrypt.hash(passwordToHash, 10);
   return {
     id: parseInt(username) || 1,
     username,
-    hashedPassword: await bcrypt.hash('password123', 10),
+    hashedPassword,
     isAdmin: username === 'admin'
   };
 }
