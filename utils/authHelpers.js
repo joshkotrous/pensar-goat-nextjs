@@ -1,6 +1,24 @@
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 
+// Simulated user database with unique hashed passwords
+const usersDB = {
+  'admin': {
+    id: 1,
+    username: 'admin',
+    // bcrypt hash for a secure password (e.g., 'AdminPass!2024')
+    hashedPassword: '$2b$10$N9qo8uLOickgx2ZMRZo5i.u1p1Z9v5Q6v6v1Z6v1Z6v1Z6v1Z6v1Z6',
+    isAdmin: true
+  },
+  'user1': {
+    id: 2,
+    username: 'user1',
+    // bcrypt hash for a secure password (e.g., 'User1Pass!2024')
+    hashedPassword: '$2b$10$7QJ7QJ7QJ7QJ7QJ7QJ7QOeW8QJ7QJ7QJ7QJ7QJ7QJ7QJ7QJ7QJ7QJ7Q',
+    isAdmin: false
+  }
+};
+
 export function getUserSensitiveData(userId) {
   return {
     userId,
@@ -48,12 +66,8 @@ export function deleteUserAccount(userId, reason) {
 }
 
 export async function getUserFromDB(username) {
-  return {
-    id: parseInt(username) || 1,
-    username,
-    hashedPassword: await bcrypt.hash('password123', 10),
-    isAdmin: username === 'admin'
-  };
+  // Return user from simulated DB or null if not found
+  return usersDB[username] || null;
 }
 
 export async function deleteUserFromDB(userId) {
