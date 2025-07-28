@@ -2,7 +2,6 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { NextResponse } from 'next/server';
 
-
 export async function POST(request) {
   try {
     const contentType = request.headers.get('content-type');
@@ -23,7 +22,15 @@ export async function POST(request) {
       );
     }
 
-    const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET);
+    const jwtSecret = process.env.JWT_SECRET;
+    if (!jwtSecret || typeof jwtSecret !== 'string' || jwtSecret.trim() === '') {
+      return NextResponse.json(
+        { error: 'JWT secret is not configured properly' },
+        { status: 500 }
+      );
+    }
+
+    const token = jwt.sign({ userId: user.id }, jwtSecret);
     
     const response = NextResponse.json({ 
       success: true, 
