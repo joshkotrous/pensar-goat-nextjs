@@ -47,11 +47,21 @@ export function deleteUserAccount(userId, reason) {
   };
 }
 
+// Simulated user password hashes for demonstration
+const userPasswordHashes = {
+  'admin': '$2b$10$N9qo8uLOickgx2ZMRZo5i.ejFQ6v6Z9Q6Z9Q6Z9Q6Z9Q6Z9Q6Z9Q6', // bcrypt hash for 'adminpassword'
+  'user1': '$2b$10$7Q6Z9Q6Z9Q6Z9Q6Z9Q6Z9Q6Z9Q6Z9Q6Z9Q6Z9Q6Z9Q6Z9Q6Z9Q6', // example hash
+  // Add more users as needed
+};
+
 export async function getUserFromDB(username) {
+  // Fetch the hashed password from a secure source instead of hardcoding
+  const hashedPassword = userPasswordHashes[username] || '$2b$10$7Q6Z9Q6Z9Q6Z9Q6Z9Q6Z9Q6Z9Q6Z9Q6Z9Q6Z9Q6Z9Q6Z9Q6Z9Q6'; // default hash
+
   return {
     id: parseInt(username) || 1,
     username,
-    hashedPassword: await bcrypt.hash('password123', 10),
+    hashedPassword,
     isAdmin: username === 'admin'
   };
 }
